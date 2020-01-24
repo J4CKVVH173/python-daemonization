@@ -124,7 +124,3 @@ class Daemon(ABC):
             print('Pid file is broken')
             sys.exit(1)
         return pid
-
-
-d = Daemon('/home/andrey/file.pid', 'home/andrey/out.txt')
-d.stop()
