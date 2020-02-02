@@ -27,7 +27,7 @@ class Daemon(ABC):
         pass
 
     @staticmethod
-    def new_fork():
+    def _new_fork():
         """Метод создает компию основного процесса и завершает основной процесс."""
         try:
             middle_pid = os.fork()
@@ -38,9 +38,9 @@ class Daemon(ABC):
             sys.stderr.write(f"fork error: {e.errno} - {e.strerror}")
             sys.exit(1)
 
-    def daemonize(self):
+    def _daemonize(self):
         """Метод производящий дублирование потока с помощью fork и уводящий его в фон (демонизирует)."""
-        self.new_fork()
+        self._new_fork()
 
         # производится отеление процесса от родителя и его полная демонизация
         # https://stackoverflow.com/questions/45911705/why-use-os-setsid-in-python - подробное описание или смотри
@@ -48,7 +48,7 @@ class Daemon(ABC):
         os.chdir('/')  # установка процесса в корень
         os.setsid()  # создание сеанса и выставление процесса лидером группы
 
-        self.new_fork()
+        self._new_fork()
         daemon_pid = str(os.getpid())
 
         print(f"{self.START_MASSAGE} {daemon_pid}")
@@ -57,7 +57,7 @@ class Daemon(ABC):
             file.write(daemon_pid)
 
         # модуль следит за тем чтобы перед завершением программы файл с pid был удален
-        atexit.register(self.del_pid_file)
+        atexit.register(self._del_pid_file)
 
         # перенаправление стандартных выводов в файл
 
@@ -72,7 +72,7 @@ class Daemon(ABC):
         system_output.close()
         system_error.close()
 
-    def del_pid_file(self):
+    def _del_pid_file(self):
         """Метод для удаления файла с PID."""
         try:
             os.remove(self.pid_file)
@@ -81,16 +81,16 @@ class Daemon(ABC):
 
     def start(self):
         """Метод производит запуск демонизацию метода daemon."""
-        pid = self.get_pid()
+        pid = self._get_pid()
         if pid:
             print(f'File with pid already exist. Daemon already running.\nCheck {self.pid_file}')
             sys.exit(1)
-        self.daemonize()
+        self._daemonize()
         self.daemon()
 
     def stop(self):
         """Метод производит остановку демона."""
-        pid = self.get_pid()
+        pid = self._get_pid()
         if pid is None:
             print(f'Pid file does not exist\nCheck it {self.pid_file}')
             sys.exit(1)
@@ -102,7 +102,7 @@ class Daemon(ABC):
         except OSError as e:
             if "No such process" not in e.strerror or "Нет такого процесса" not in e.strerror:
                 if os.path.exists(self.pid_file):
-                    self.del_pid_file()
+                    self._del_pid_file()
             else:
                 print(e.strerror)
                 sys.exit(1)
@@ -113,7 +113,7 @@ class Daemon(ABC):
         time.sleep(0.1)
         self.start()
 
-    def get_pid(self) -> None or int:
+    def _get_pid(self) -> None or int:
         """Возвращает pid или None если не вышло его достать."""
         try:
             with open(self.pid_file, 'r') as file:
@@ -124,3 +124,4 @@ class Daemon(ABC):
             print('Pid file is broken')
             sys.exit(1)
         return pid
+
